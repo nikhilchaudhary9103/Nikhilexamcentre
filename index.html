@@ -5,55 +5,53 @@
   <title>Nikhil Exam Center - Math CBT</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: Arial;
       display: flex;
       margin: 0;
-      background: #f4f6f9;
+      background: #f8f9fa;
     }
     .sidebar {
       width: 20%;
-      background: #333;
-      color: white;
-      padding: 20px;
+      background: #ffffff;
+      padding: 10px;
+      border-right: 1px solid #ccc;
       height: 100vh;
+      overflow-y: auto;
       position: sticky;
       top: 0;
     }
     .sidebar h2 {
-      font-size: 24px;
       text-align: center;
-      margin-bottom: 20px;
-      color: #f8f9fa;
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #333;
     }
     .sidebar button {
-      width: 45px;
-      height: 45px;
+      width: 40px;
+      height: 40px;
       margin: 5px;
       border: none;
-      background: #ccc;
-      border-radius: 50%;
+      background: #eee;
+      border-radius: 5px;
       cursor: pointer;
-      font-size: 18px;
     }
     .sidebar button.active {
-      background: #28a745;
+      background: green;
       color: white;
     }
     .sidebar button.current {
-      background: #007bff;
-      border: 2px solid #0056b3;
+      border: 2px solid blue;
     }
     .content {
       flex: 1;
       padding: 20px;
-      max-width: 80%;
     }
     .question-box {
-      border: 1px solid #ddd;
-      padding: 20px;
+      border: 1px solid #ccc;
+      padding: 15px;
       border-radius: 10px;
-      background: #ffffff;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
     }
     .options label {
       display: block;
@@ -64,19 +62,15 @@
       margin-top: 20px;
     }
     .nav-buttons button {
-      padding: 12px 24px;
-      margin-right: 15px;
+      padding: 10px 20px;
+      margin-right: 10px;
       border-radius: 8px;
       cursor: pointer;
-      background-color: #28a745;
-      color: white;
-      font-size: 16px;
-      border: none;
     }
     .score-box {
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
-      margin-top: 30px;
+      margin-top: 20px;
       color: green;
     }
     .timer {
@@ -84,7 +78,7 @@
       font-size: 18px;
       font-weight: bold;
       color: red;
-      margin-bottom: 20px;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -92,12 +86,17 @@
 
 <div class="sidebar" id="sidebar">
   <h2>🧮 Nikhil Exam Center</h2>
+  <div id="user-status"></div>
+  <div id="login-buttons">
+    <button onclick="signIn()">Sign In</button>
+    <button onclick="signUp()">Sign Up</button>
+  </div>
 </div>
 
 <div class="content">
   <div class="timer" id="timer">Time Left: 15:00</div>
   <div class="question-box">
-    <div id="question">Loading question...</div>
+    <div id="question">Please log in to start the exam.</div>
     <div class="options" id="options"></div>
     <div class="nav-buttons">
       <button onclick="prevQuestion()">⬅️ Previous</button>
@@ -105,160 +104,158 @@
       <button onclick="submitExam()">✅ Submit</button>
     </div>
     <div class="score-box" id="score"></div>
-    <div id="error-message"></div> <!-- For displaying error messages after exam -->
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
+
 <script>
-  const questions = [];
-  const answers = [];
-  const correctAnswers = [];
-  let current = 0;
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyDgD17HehIZ3RXWy9B6RbYT2Bl4HTZZzfI",
+  authDomain: "cloudstorage-bf72f.firebaseapp.com",
+  databaseURL: "https://cloudstorage-bf72f-default-rtdb.firebaseio.com",
+  projectId: "cloudstorage-bf72f",
+  storageBucket: "cloudstorage-bf72f.firebasestorage.app",
+  messagingSenderId: "240415341844",
+  appId: "1:240415341844:web:e508a987cbbea4dcf01601",
+  measurementId: "G-E49R91SPL9"
+};
 
-  function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
-  }
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
 
-  function generateMathQuestions() {
-    const types = ['add', 'sub', 'mul', 'div', 'square'];
-    for (let i = 0; i < 100; i++) {
-      const type = types[getRandomInt(0, types.length - 1)];
-      let a = getRandomInt(1, 10);  // Only integers between 1 and 10
-      let b = getRandomInt(1, 10);  // Only integers between 1 and 10
-      let questionText, correct;
+// Exam logic
+const questions = [];
+let current = 0;
+const answers = [];
 
-      switch (type) {
-        case 'add':
-          correct = a + b;
-          questionText = `${a} + ${b} = ?`;
-          break;
-        case 'sub':
-          correct = a - b;
-          questionText = `${a} - ${b} = ?`;
-          break;
-        case 'mul':
-          correct = a * b;
-          questionText = `${a} × ${b} = ?`;
-          break;
-        case 'div':
-          correct = Math.floor(a / b); // Round off result for division
-          questionText = `${a} ÷ ${b} = ? (Round off)`;
-          break;
-        case 'square':
-          correct = a * a;
-          questionText = `What is ${a}² ?`;
-          break;
-      }
+function getRandomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-      const options = [];
-      const correctIndex = getRandomInt(0, 3);
-      for (let j = 0; j < 4; j++) {
-        if (j === correctIndex) {
-          options.push(correct);
-        } else {
-          let wrong = correct + getRandomInt(-5, 5); // Adding wrong answers with slight deviation
-          while (wrong === correct || options.includes(wrong)) {
-            wrong = correct + getRandomInt(-5, 5);
-          }
-          options.push(wrong);
+function generateMathQuestions() {
+  const types = ['add', 'sub', 'mul', 'div', 'square'];
+  for (let i = 0; i < 100; i++) {
+    const type = types[getRandomInt(0, types.length - 1)];
+    let a = getRandomInt(1, 10); 
+    let b = getRandomInt(1, 10); 
+    let questionText, correct;
+
+    switch (type) {
+      case 'add':
+        correct = a + b;
+        questionText = `${a} + ${b} = ?`;
+        break;
+      case 'sub':
+        correct = a - b;
+        questionText = `${a} - ${b} = ?`;
+        break;
+      case 'mul':
+        correct = a * b;
+        questionText = `${a} × ${b} = ?`;
+        break;
+      case 'div':
+        correct = Math.floor(a / b);
+        questionText = `${a} ÷ ${b} = ?`;
+        break;
+      case 'square':
+        correct = a * a;
+        questionText = `What is ${a}² ?`;
+        break;
+    }
+
+    const options = [];
+    const correctIndex = getRandomInt(0, 3);
+    for (let j = 0; j < 4; j++) {
+      if (j === correctIndex) {
+        options.push(correct);
+      } else {
+        let wrong = correct + getRandomInt(-5, 5);
+        while (wrong === correct || options.includes(wrong)) {
+          wrong = correct + getRandomInt(-5, 5);
         }
+        options.push(wrong);
       }
-
-      questions.push({ q: questionText, options, correctIndex });
-      correctAnswers.push(correct);  // Store correct answer for validation
-      answers.push(null);  // Initialize with null, meaning no answer chosen yet
     }
-  }
 
-  function loadQuestion(index) {
-    const q = questions[index];
-    document.getElementById("question").innerText = `Q${index + 1}: ${q.q}`;
-    document.getElementById("options").innerHTML = q.options.map((opt, i) => `
-      <label>
-        <input type="radio" name="opt" value="${i}" ${answers[index] === i ? "checked" : ""} onchange="saveAnswer(${index}, ${i})"> ${opt}
-      </label>
-    `).join('');
-    updateSidebarButtons();
-    scrollToCurrent();
+    questions.push({ q: questionText, options, correctIndex });
+    answers.push(null);
   }
+}
 
-  function saveAnswer(qIndex, optIndex) {
-    answers[qIndex] = optIndex;
-    updateSidebarButtons();
-  }
+function loadQuestion(index) {
+  const q = questions[index];
+  document.getElementById("question").innerText = `Q${index + 1}: ${q.q}`;
+  document.getElementById("options").innerHTML = q.options.map((opt, i) => `
+    <label>
+      <input type="radio" name="opt" value="${i}" ${answers[index] === i ? "checked" : ""} onchange="saveAnswer(${index}, ${i})"> ${opt}
+    </label>
+  `).join('');
+}
 
-  function nextQuestion() {
-    if (current < questions.length - 1) {
-      current++;
-      loadQuestion(current);
-    }
-  }
+function saveAnswer(qIndex, optIndex) {
+  answers[qIndex] = optIndex;
+}
 
-  function prevQuestion() {
-    if (current > 0) {
-      current--;
-      loadQuestion(current);
-    }
-  }
-
-  function goToQuestion(index) {
-    current = index;
+function nextQuestion() {
+  if (current < questions.length - 1) {
+    current++;
     loadQuestion(current);
   }
+}
 
-  function updateSidebarButtons() {
-    const sidebar = document.getElementById("sidebar");
-    sidebar.innerHTML = `<h2>🧮 Nikhil Exam Center</h2>` + questions.map((_, i) => `
-      <button onclick="goToQuestion(${i})" class="${answers[i] !== null ? 'active' : ''} ${i === current ? 'current' : ''}">${i + 1}</button>
-    `).join('');
+function prevQuestion() {
+  if (current > 0) {
+    current--;
+    loadQuestion(current);
   }
+}
 
-  function scrollToCurrent() {
-    const sidebar = document.getElementById("sidebar");
-    const currentButton = sidebar.querySelector(".current");
-    if (currentButton) {
-      currentButton.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }
+function submitExam() {
+  let score = 0;
+  questions.forEach((q, i) => {
+    if (answers[i] === q.correctIndex) score++;
+  });
+  document.getElementById("score").innerText = `You scored: ${score}/100`;
+}
 
-  function submitExam() {
-    let score = 0;
-    let wrongAnswers = [];
-    questions.forEach((q, i) => {
-      if (answers[i] === q.correctIndex) score++;
-      else wrongAnswers.push(`Q${i + 1}`);
+function signIn() {
+  const email = prompt("Enter your email:");
+  const password = prompt("Enter your password:");
+
+  auth.signInWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      loadExam();
+    })
+    .catch((error) => {
+      alert("Error: " + error.message);
     });
-    
-    let message = "";
-    if (score > 90) message = "🔥 Excellent!";
-    else if (score > 75) message = "💪 Good Job!";
-    else if (score > 50) message = "🙂 Average!";
-    else message = "😐 Thoda aur padho!";
-    
-    document.getElementById("score").innerText = `Aapke Number: ${score}/100 ${message}`;
-    
-    // Display incorrect answers
-    if (wrongAnswers.length > 0) {
-      document.getElementById("error-message").innerText = `Incorrect answers: ${wrongAnswers.join(', ')}`;
-    }
-  }
+}
 
-  // Timer
-  let timeLeft = 15 * 60;  // 15 minutes in seconds
-  const timerInterval = setInterval(() => {
-    if (timeLeft <= 0) {
-      clearInterval(timerInterval);
-      submitExam();
-    } else {
-      timeLeft--;
-      const mins = String(Math.floor(timeLeft / 60)).padStart(2, '0');
-      const secs = String(timeLeft % 60).padStart(2, '0');
-      document.getElementById("timer").innerText = `Time Left: ${mins}:${secs}`;
-    }
-  }, 1000);
+function signUp() {
+  const email = prompt("Enter your email:");
+  const password = prompt("Enter your password:");
 
+  auth.createUserWithEmailAndPassword(email, password)
+    .then((userCredential) => {
+      loadExam();
+    })
+    .catch((error) => {
+      alert("Error: " + error.message);
+    });
+}
+
+function loadExam() {
+  document.getElementById("user-status").innerText = "You are logged in!";
   generateMathQuestions();
   loadQuestion(current);
+}
+
 </script>
 
 </body>
