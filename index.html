@@ -5,53 +5,55 @@
   <title>Nikhil Exam Center - Math CBT</title>
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       display: flex;
       margin: 0;
-      background: #f8f9fa;
+      background: #f4f6f9;
     }
     .sidebar {
       width: 20%;
-      background: #ffffff;
-      padding: 10px;
-      border-right: 1px solid #ccc;
+      background: #333;
+      color: white;
+      padding: 20px;
       height: 100vh;
-      overflow-y: auto;
       position: sticky;
       top: 0;
     }
     .sidebar h2 {
+      font-size: 24px;
       text-align: center;
-      font-size: 18px;
-      margin-bottom: 10px;
-      color: #333;
+      margin-bottom: 20px;
+      color: #f8f9fa;
     }
     .sidebar button {
-      width: 40px;
-      height: 40px;
+      width: 45px;
+      height: 45px;
       margin: 5px;
       border: none;
-      background: #eee;
-      border-radius: 5px;
+      background: #ccc;
+      border-radius: 50%;
       cursor: pointer;
+      font-size: 18px;
     }
     .sidebar button.active {
-      background: green;
+      background: #28a745;
       color: white;
     }
     .sidebar button.current {
-      border: 2px solid blue;
+      background: #007bff;
+      border: 2px solid #0056b3;
     }
     .content {
       flex: 1;
       padding: 20px;
+      max-width: 80%;
     }
     .question-box {
-      border: 1px solid #ccc;
-      padding: 15px;
+      border: 1px solid #ddd;
+      padding: 20px;
       border-radius: 10px;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+      background: #ffffff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
     .options label {
       display: block;
@@ -62,15 +64,19 @@
       margin-top: 20px;
     }
     .nav-buttons button {
-      padding: 10px 20px;
-      margin-right: 10px;
+      padding: 12px 24px;
+      margin-right: 15px;
       border-radius: 8px;
       cursor: pointer;
+      background-color: #28a745;
+      color: white;
+      font-size: 16px;
+      border: none;
     }
     .score-box {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: bold;
-      margin-top: 20px;
+      margin-top: 30px;
       color: green;
     }
     .timer {
@@ -78,7 +84,7 @@
       font-size: 18px;
       font-weight: bold;
       color: red;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
   </style>
 </head>
@@ -99,12 +105,14 @@
       <button onclick="submitExam()">✅ Submit</button>
     </div>
     <div class="score-box" id="score"></div>
+    <div id="error-message"></div> <!-- For displaying error messages after exam -->
   </div>
 </div>
 
 <script>
   const questions = [];
   const answers = [];
+  const correctAnswers = [];
   let current = 0;
 
   function getRandomInt(min, max) {
@@ -115,8 +123,8 @@
     const types = ['add', 'sub', 'mul', 'div', 'square'];
     for (let i = 0; i < 100; i++) {
       const type = types[getRandomInt(0, types.length - 1)];
-      let a = getRandomInt(1, 10);
-      let b = getRandomInt(1, 10);
+      let a = getRandomInt(1, 10);  // Only integers between 1 and 10
+      let b = getRandomInt(1, 10);  // Only integers between 1 and 10
       let questionText, correct;
 
       switch (type) {
@@ -133,7 +141,7 @@
           questionText = `${a} × ${b} = ?`;
           break;
         case 'div':
-          correct = Math.floor(a / b);
+          correct = Math.floor(a / b); // Round off result for division
           questionText = `${a} ÷ ${b} = ? (Round off)`;
           break;
         case 'square':
@@ -148,16 +156,17 @@
         if (j === correctIndex) {
           options.push(correct);
         } else {
-          let wrong = correct + getRandomInt(-10, 10);
+          let wrong = correct + getRandomInt(-5, 5); // Adding wrong answers with slight deviation
           while (wrong === correct || options.includes(wrong)) {
-            wrong = correct + getRandomInt(-10, 10);
+            wrong = correct + getRandomInt(-5, 5);
           }
           options.push(wrong);
         }
       }
 
       questions.push({ q: questionText, options, correctIndex });
-      answers.push(null);
+      correctAnswers.push(correct);  // Store correct answer for validation
+      answers.push(null);  // Initialize with null, meaning no answer chosen yet
     }
   }
 
@@ -214,26 +223,38 @@
 
   function submitExam() {
     let score = 0;
+    let wrongAnswers = [];
     questions.forEach((q, i) => {
       if (answers[i] === q.correctIndex) score++;
+      else wrongAnswers.push(`Q${i + 1}`);
     });
+    
     let message = "";
-    if (score > 90) message = " Excellent!";
-    else if (score > 75) message = " Good Job!";
-    else if (score > 50) message = "  Average!";
-    else message = "😊 Thoda aur padho bhai jindi abhi gyi thode naa hai !";
-
+    if (score > 90) message = "🔥 Excellent!";
+    else if (score > 75) message = "💪 Good Job!";
+    else if (score > 50) message = "🙂 Average!";
+    else message = "😐 Thoda aur padho!";
+    
     document.getElementById("score").innerText = `Aapke Number: ${score}/100 ${message}`;
+    
+    // Display incorrect answers
+    if (wrongAnswers.length > 0) {
+      document.getElementById("error-message").innerText = `Incorrect answers: ${wrongAnswers.join(', ')}`;
+    }
   }
 
   // Timer
-  let timeLeft = 15 * 60;
-  setInterval(() => {
-    if (timeLeft <= 0) return;
-    timeLeft--;
-    const mins = String(Math.floor(timeLeft / 60)).padStart(2, '0');
-    const secs = String(timeLeft % 60).padStart(2, '0');
-    document.getElementById("timer").innerText = `Time Left: ${mins}:${secs}`;
+  let timeLeft = 15 * 60;  // 15 minutes in seconds
+  const timerInterval = setInterval(() => {
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      submitExam();
+    } else {
+      timeLeft--;
+      const mins = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+      const secs = String(timeLeft % 60).padStart(2, '0');
+      document.getElementById("timer").innerText = `Time Left: ${mins}:${secs}`;
+    }
   }, 1000);
 
   generateMathQuestions();
@@ -241,4 +262,4 @@
 </script>
 
 </body>
-</html>
+  </html>
