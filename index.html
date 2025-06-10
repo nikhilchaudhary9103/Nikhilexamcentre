@@ -181,13 +181,13 @@ function checkTimeAndStart() {
   const now = new Date();
   const hour = now.getHours();
 
-  if (hour >= 21 && hour < 22) {
+  if (hour >= 13 && hour < 22) {
     generateMathQuestions();
     loadQuestion(current);
     startTimer(60 * 60);
   } else {
     document.getElementById("mainContent").innerHTML = `
-      <div class="busy-box">🚫 Website busy hai! Exam timing: 9:00 PM to 10:00 PM</div>
+      <div class="busy-box">🚫 Website busy hai! Exam timing: 1:00 PM to 10:00 PM</div>
     `;
   }
 }
