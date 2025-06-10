@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Nikhil Exam Center - Math CBT</title>
+  <style>
+    body {
+      font-family: Arial;
+      display: flex;
+      margin: 0;
+      background: #f8f9fa;
+    }
+    .sidebar {
+      width: 20%;
+      background: #ffffff;
+      padding: 10px;
+      border-right: 1px solid #ccc;
+      height: 100vh;
+      overflow-y: auto;
+      position: sticky;
+      top: 0;
+    }
+    .sidebar h2 {
+      text-align: center;
+      font-size: 18px;
+      margin-bottom: 10px;
+      color: #333;
+    }
+    .sidebar button {
+      width: 40px;
+      height: 40px;
+      margin: 5px;
+      border: none;
+      background: #eee;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .sidebar button.active {
+      background: green;
+      color: white;
+    }
+    .sidebar button.current {
+      border: 2px solid blue;
+    }
+    .content {
+      flex: 1;
+      padding: 20px;
+    }
+    .question-box {
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .options label {
+      display: block;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .nav-buttons {
+      margin-top: 20px;
+    }
+    .nav-buttons button {
+      padding: 10px 20px;
+      margin-right: 10px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .score-box {
+      font-size: 20px;
+      font-weight: bold;
+      margin-top: 20px;
+      color: green;
+    }
+    .timer {
+      text-align: right;
+      font-size: 18px;
+      font-weight: bold;
+      color: red;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <h2>🧮 Nikhil Exam Center</h2>
+</div>
+
+<div class="content">
+  <div class="timer" id="timer">Time Left: 15:00</div>
+  <div class="question-box">
+    <div id="question">Loading question...</div>
+    <div class="options" id="options"></div>
+    <div class="nav-buttons">
+      <button onclick="prevQuestion()">⬅️ Previous</button>
+      <button onclick="nextQuestion()">Next ➡️</button>
+      <button onclick="submitExam()">✅ Submit</button>
+    </div>
+    <div class="score-box" id="score"></div>
+  </div>
+</div>
+
+<script>
+  const questions = [];
+  const answers = [];
+  let current = 0;
+
+  function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function generateMathQuestions() {
+    const types = ['add', 'sub', 'mul', 'div', 'square'];
+    for (let i = 0; i < 100; i++) {
+      const type = types[getRandomInt(0, types.length - 1)];
+      let a = getRandomInt(1, 50);
+      let b = getRandomInt(1, 20);
+      let questionText, correct;
+
+      switch (type) {
+        case 'add':
+          correct = a + b;
+          questionText = `${a} + ${b} = ?`;
+          break;
+        case 'sub':
+          correct = a - b;
+          questionText = `${a} - ${b} = ?`;
+          break;
+        case 'mul':
+          correct = a * b;
+          questionText = `${a} × ${b} = ?`;
+          break;
+        case 'div':
+          correct = Math.floor(a / b);
+          questionText = `${a} ÷ ${b} = ? (Round off)`;
+          break;
+        case 'square':
+          correct = a * a;
+          questionText = `What is ${a}² ?`;
+          break;
+      }
+
+      const options = [];
+      const correctIndex = getRandomInt(0, 3);
+      for (let j = 0; j < 4; j++) {
+        if (j === correctIndex) {
+          options.push(correct);
+        } else {
+          let wrong = correct + getRandomInt(-10, 10);
+          while (wrong === correct || options.includes(wrong)) {
+            wrong = correct + getRandomInt(-10, 10);
+          }
+          options.push(wrong);
+        }
+      }
+
+      questions.push({ q: questionText, options, correctIndex });
+      answers.push(null);
+    }
+  }
+
+  function loadQuestion(index) {
+    const q = questions[index];
+    document.getElementById("question").innerText = `Q${index + 1}: ${q.q}`;
+    document.getElementById("options").innerHTML = q.options.map((opt, i) => `
+      <label>
+        <input type="radio" name="opt" value="${i}" ${answers[index] === i ? "checked" : ""} onchange="saveAnswer(${index}, ${i})"> ${opt}
+      </label>
+    `).join('');
+    updateSidebarButtons();
+    scrollToCurrent();
+  }
+
+  function saveAnswer(qIndex, optIndex) {
+    answers[qIndex] = optIndex;
+    updateSidebarButtons();
+  }
+
+  function nextQuestion() {
+    if (current < questions.length - 1) {
+      current++;
+      loadQuestion(current);
+    }
+  }
+
+  function prevQuestion() {
+    if (current > 0) {
+      current--;
+      loadQuestion(current);
+    }
+  }
+
+  function goToQuestion(index) {
+    current = index;
+    loadQuestion(current);
+  }
+
+  function updateSidebarButtons() {
+    const sidebar = document.getElementById("sidebar");
+    sidebar.innerHTML = `<h2>🧮 Nikhil Exam Center</h2>` + questions.map((_, i) => `
+      <button onclick="goToQuestion(${i})" class="${answers[i] !== null ? 'active' : ''} ${i === current ? 'current' : ''}">${i + 1}</button>
+    `).join('');
+  }
+
+  function scrollToCurrent() {
+    const sidebar = document.getElementById("sidebar");
+    const currentButton = sidebar.querySelector(".current");
+    if (currentButton) {
+      currentButton.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }
+
+  function submitExam() {
+    let score = 0;
+    questions.forEach((q, i) => {
+      if (answers[i] === q.correctIndex) score++;
+    });
+    let message = "";
+    if (score > 90) message = " Excellent!";
+    else if (score > 75) message = " Good Job!";
+    else if (score > 50) message = "  Average!";
+    else message = "😊 Thoda aur padho bhai jindi abhi gyi thode naa hai !";
+
+    document.getElementById("score").innerText = `Aapke Number: ${score}/100 ${message}`;
+  }
+
+  // Timer
+  let timeLeft = 15 * 60;
+  setInterval(() => {
+    if (timeLeft <= 0) return;
+    timeLeft--;
+    const mins = String(Math.floor(timeLeft / 60)).padStart(2, '0');
+    const secs = String(timeLeft % 60).padStart(2, '0');
+    document.getElementById("timer").innerText = `Time Left: ${mins}:${secs}`;
+  }, 1000);
+
+  generateMathQuestions();
+  loadQuestion(current);
+</script>
+
+</body>
+</html>
